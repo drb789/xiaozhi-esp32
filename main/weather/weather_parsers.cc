@@ -175,3 +175,22 @@ AirNowData ParseAirNowResponse(const std::string& body, int http_status) {
     data.ok = true;
     return data;
 }
+
+AirNowData ParseAirCurrentResponse(const std::string& body, int http_status) {
+    AirNowData data;
+    data.key_invalid = http_status == 401 || http_status == 403;
+    if (http_status != 200) return data;
+    CJsonUniquePtr root(cJSON_Parse(body.c_str()));
+    if (root == nullptr || !cJSON_IsObject(root.get())) return data;
+    cJSON* indexes = cJSON_GetObjectItem(root.get(), "indexes");
+    if (!cJSON_IsArray(indexes)) return data;
+    cJSON* item = nullptr;
+    cJSON_ArrayForEach(item, indexes) {
+        if (GetStringField(item, "code") != "cn-mee") continue;
+        if (!TryGetIntField(item, "aqi", data.aqi)) return data;
+        data.category = GetStringField(item, "category");
+        data.ok = !data.category.empty();
+        return data;
+    }
+    return data;
+}

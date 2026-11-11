@@ -24,9 +24,12 @@ CityChangeResult ChangeCity(const std::string& city_name) {
         return result;
     }
 
-    std::string url = "https://geoapi.qweather.com/v2/city/lookup?location=" +
-                      UrlEncode(city_name) + "&number=1&key=" + key;
-    auto response = HttpGet(url, 8000);
+    std::string host = WeatherKeyStore().GetHost();
+    std::string url = host.empty() ? "https://geoapi.qweather.com/v2/city/lookup?location="
+                                   : "https://" + host + "/geo/v2/city/lookup?location=";
+    url += UrlEncode(city_name) + "&number=1";
+    if (host.empty()) url += "&key=" + UrlEncode(key);
+    auto response = HttpGet(url, 8000, host.empty() ? "" : key);
     CityLookupData lookup = ParseCityLookupResponse(response.body, response.status);
     result.key_invalid = lookup.key_invalid;
     if (lookup.key_invalid) {
