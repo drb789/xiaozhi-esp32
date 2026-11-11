@@ -90,7 +90,7 @@ std::string UrlEncode(const std::string& value) {
     return encoded;
 }
 
-HttpResult HttpGet(const std::string& url, int timeout_ms) {
+HttpResult HttpGet(const std::string& url, int timeout_ms, const std::string& api_key) {
     HttpResult result;
     std::string redacted = RedactUrl(url);
 
@@ -105,6 +105,10 @@ HttpResult HttpGet(const std::string& url, int timeout_ms) {
     if (client == nullptr) {
         ESP_LOGE(TAG, "Failed to initialize client for %s", redacted.c_str());
         return result;
+    }
+
+    if (!api_key.empty()) {
+        esp_http_client_set_header(client, "X-QW-Api-Key", api_key.c_str());
     }
 
     esp_err_t err = esp_http_client_open(client, 0);

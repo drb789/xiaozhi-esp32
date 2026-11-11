@@ -236,10 +236,14 @@ void WeatherService::TaskLoop() {
 
         char location[64];
         snprintf(location, sizeof(location), "%.4f,%.4f", geo.lon, geo.lat);
-        std::string base = "https://devapi.qweather.com/v7/";
-        std::string query = std::string("?location=") + location + "&key=" + key;
+        std::string host = key_store_.GetHost();
+        std::string base = host.empty() ? "https://devapi.qweather.com/v7/"
+                                        : "https://" + host + "/v7/";
+        std::string query = std::string("?location=") + location;
+        if (host.empty()) query += "&key=" + UrlEncode(key);
 
-        auto weather_resp = HttpGet(base + "weather/now" + query);
+        auto weather_resp = HttpGet(base + "weather/now" + query, 5000,
+                                    host.empty() ? "" : key);
         WeatherNowData weather =
             ParseWeatherNowResponse(weather_resp.body, weather_resp.status);
         if (!weather.ok) {
@@ -263,8 +267,14 @@ void WeatherService::TaskLoop() {
         snapshot.humidity = weather.humidity;
         snapshot.updated_at = time(nullptr);
 
-        auto air_resp = HttpGet(base + "air/now" + query);
-        AirNowData air = ParseAirNowResponse(air_resp.body, air_resp.status);
+        char air_location[64];
+        snprintf(air_location, sizeof(air_location), "%.2f/%.2f", geo.lat, geo.lon);
+        auto air_resp = host.empty()
+                            ? HttpGet(base + "air/now" + query)
+                            : HttpGet("https://" + host + "/airquality/v1/current/" +
+                                          air_location, 5000, key);
+        AirNowData air = host.empty() ? ParseAirNowResponse(air_resp.body, air_resp.status)
+                                      : ParseAirCurrentResponse(air_resp.body, air_resp.status);
         if (air.ok) {
             snapshot.aqi = air.aqi;
         } else {

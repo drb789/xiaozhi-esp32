@@ -8,7 +8,8 @@ struct HttpResult {
     std::string body;
 };
 
-HttpResult HttpGet(const std::string& url, int timeout_ms = 5000);
+HttpResult HttpGet(const std::string& url, int timeout_ms = 5000,
+                   const std::string& api_key = {});
 
 // Percent-encode a string for use in a URL query value (UTF-8 bytes are
 // encoded one by one, so Chinese city names are safe).

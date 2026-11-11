@@ -278,6 +278,38 @@ private:
         };
         ESP_ERROR_CHECK(esp_console_cmd_register(&weather_key_cmd));
 
+        const esp_console_cmd_t weather_host_cmd = {
+            .command = "weather_host",
+            .help = "Set the QWeather API Host: weather_host <host>",
+            .hint = nullptr,
+            .func = [](int argc, char** argv) -> int {
+                if (argc != 2 || !WeatherKeyStore().SetHost(argv[1])) {
+                    printf("invalid weather host\r\n");
+                    return 1;
+                }
+                WeatherService::GetInstance().OnKeyUpdated();
+                printf("weather host saved\r\n");
+                return 0;
+            },
+            .argtable = nullptr
+        };
+        ESP_ERROR_CHECK(esp_console_cmd_register(&weather_host_cmd));
+
+        const esp_console_cmd_t weather_status_cmd = {
+            .command = "weather_status",
+            .help = "Show the current weather service status (without credentials)",
+            .hint = nullptr,
+            .func = [](int, char**) -> int {
+                auto s = WeatherService::GetInstance().GetSnapshot();
+                printf("weather valid=%d no_key=%d auth_error=%d city=%s temp=%d humidity=%d aqi=%d\r\n",
+                       s.valid, s.no_key, s.key_invalid, s.city.c_str(),
+                       s.temperature, s.humidity, s.aqi);
+                return 0;
+            },
+            .argtable = nullptr
+        };
+        ESP_ERROR_CHECK(esp_console_cmd_register(&weather_status_cmd));
+
         const esp_console_cmd_t city_cmd = {
             .command = "city",
             .help = "Set the manual city in NVS: city <chinese city name>",
