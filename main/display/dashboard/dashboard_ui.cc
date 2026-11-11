@@ -79,11 +79,14 @@ void SetStaticOrMarquee(lv_obj_t* label, const char* text) {
     lv_label_set_text(label, text);
 }
 
-// Pin a content-sized badge to the right margin (8px). Must run after the
-// label text is set; forces layout so the measured width is current.
+// Pin a content-sized badge to the available right edge after setting text.
+// Force layout so the measured width is current.
 void AlignBadgeRight(lv_obj_t* badge) {
     lv_obj_update_layout(badge);
-    lv_obj_set_x(badge, 240 - 8 - lv_obj_get_width(badge));
+    const lv_coord_t width = lv_obj_get_content_width(lv_obj_get_parent(badge));
+    // The right column holds humidity in landscape, so keep the badge left of it.
+    const lv_coord_t right_edge = width == 320 ? 220 : width - 8;
+    lv_obj_set_x(badge, right_edge - lv_obj_get_width(badge));
 }
 
 void SetHidden(lv_obj_t* obj, bool hidden) {
@@ -106,7 +109,8 @@ DashboardUI::DashboardUI(lv_obj_t* parent) {
 
     container_ = lv_obj_create(parent);
     lv_obj_remove_style_all(container_);
-    lv_obj_set_size(container_, 240, 320);
+    lv_obj_set_size(container_, lv_display_get_horizontal_resolution(lv_display_get_default()),
+                    lv_display_get_vertical_resolution(lv_display_get_default()));
     lv_obj_set_pos(container_, 0, 0);
     lv_obj_set_style_bg_color(container_, lv_color_hex(0xFFFFFF), 0);
     lv_obj_set_style_bg_opa(container_, LV_OPA_COVER, 0);
@@ -257,6 +261,49 @@ DashboardUI::DashboardUI(lv_obj_t* parent) {
 
     humid_value_ = MakeLabel(container_, nullptr, 0x424242, 198, 289, 40, 22);
     lv_label_set_long_mode(humid_value_, LV_LABEL_LONG_CLIP);
+
+    // Reuse the existing widgets and styling for the 320x240 landscape panel.
+    if (lv_display_get_horizontal_resolution(lv_display_get_default()) == 320 &&
+        lv_display_get_vertical_resolution(lv_display_get_default()) == 240) {
+        lv_obj_set_width(network_label_, 24);
+        lv_obj_set_pos(holiday_badge_label_, 8, 30);
+        lv_obj_set_pos(holiday_notice_label_, 76, 31);
+        lv_obj_set_width(holiday_notice_label_, 158);
+        lv_obj_set_pos(city_label_, 36, 6);
+        lv_obj_set_width(city_label_, 64);
+        lv_obj_set_pos(aqi_badge_, 102, 4);
+        lv_obj_set_pos(aqi_line_label_, 151, 6);
+        lv_obj_set_width(aqi_line_label_, 160);
+        lv_label_set_long_mode(aqi_line_label_, LV_LABEL_LONG_CLIP);
+        lv_obj_set_pos(weather_icon_image_, 260, 34);
+        lv_image_set_scale(weather_icon_image_, 160);  // 64px source -> 40px.
+        lv_obj_set_pos(weather_text_badge_, 248, 77);
+        lv_obj_set_pos(hour_label_, 8, 56);
+        lv_obj_set_pos(colon_label_, 80, 47);
+        lv_obj_set_pos(minute_label_, 106, 56);
+        lv_obj_set_pos(second_label_, 178, 76);
+        lv_obj_set_pos(date_label_, 10, 115);
+        lv_obj_set_pos(weekday_label_, 112, 115);
+        lv_obj_set_width(weekday_label_, 92);
+        lv_obj_set_pos(lunar_label_, 8, 144);
+        lv_obj_set_style_pad_top(lunar_label_, 2, 0);
+        lv_obj_set_style_pad_bottom(lunar_label_, 1, 0);
+        lv_obj_set_pos(solar_term_label_, 220, 144);
+        lv_obj_set_style_pad_top(solar_term_label_, 2, 0);
+        lv_obj_set_style_pad_bottom(solar_term_label_, 1, 0);
+        lv_obj_set_pos(yi_badge_, 10, 178);
+        lv_obj_set_pos(yi_label_, 40, 180);
+        lv_obj_set_width(yi_label_, 272);
+        lv_obj_set_pos(ji_badge_, 10, 207);
+        lv_obj_set_pos(ji_label_, 40, 209);
+        lv_obj_set_width(ji_label_, 272);
+        lv_obj_set_pos(temp_icon_, 232, 105);
+        lv_obj_set_pos(temp_value_, 263, 108);
+        lv_obj_set_pos(humid_icon_, 232, 133);
+        lv_obj_set_pos(humid_value_, 263, 136);
+        SetHidden(temp_bar_, true);
+        SetHidden(humid_bar_, true);
+    }
 
     // Self-contained timers; callbacks no-op while the dashboard is hidden.
     // DashboardUI is a process-lifetime singleton with no destruction path,
@@ -432,11 +479,18 @@ void DashboardUI::UpdateNetwork() {
 
 void DashboardUI::UpdateWeather(const WeatherSnapshot& snapshot) {
     weather_snapshot_ = snapshot;
+    const bool landscape = lv_obj_get_width(container_) == 320 &&
+                           lv_obj_get_height(container_) == 240;
     lv_label_set_text(city_label_,
                       (!snapshot.city.empty()) ? snapshot.city.c_str() : "--");
 
     AqiLevelInfo level = AqiToLevel(snapshot.aqi);
     lv_label_set_text(aqi_badge_, snapshot.aqi >= 0 ? level.category : "--");
+    if (landscape) {
+        SetHidden(aqi_badge_, snapshot.aqi < 0);
+        lv_obj_set_x(aqi_line_label_, snapshot.aqi < 0 ? 105 : 151);
+        lv_obj_set_width(aqi_line_label_, snapshot.aqi < 0 ? 207 : 161);
+    }
     lv_obj_set_style_bg_color(aqi_badge_, lv_color_hex(level.color_hex), 0);
     lv_obj_set_style_text_color(aqi_badge_, lv_color_hex(level.text_color_hex), 0);
 
@@ -444,12 +498,13 @@ void DashboardUI::UpdateWeather(const WeatherSnapshot& snapshot) {
     // to the generic 999 icon if the code is missing from the pack. Skip the
     // whole swap when the displayed icon already matches the snapshot.
     bool icon_changed = false;
-    if (!snapshot.icon_code.empty() &&
-        snapshot.icon_code != loaded_icon_code_) {
+    const std::string icon_code = snapshot.icon_code.empty() && landscape
+                                      ? "999" : snapshot.icon_code;
+    if (!icon_code.empty() && icon_code != loaded_icon_code_) {
         void* ptr = nullptr;
         size_t size = 0;
         auto& assets = Assets::GetInstance();
-        if (!assets.GetAssetData(snapshot.icon_code + ".png", ptr, size)) {
+        if (!assets.GetAssetData(icon_code + ".png", ptr, size)) {
             assets.GetAssetData("999.png", ptr, size);
         }
         if (ptr != nullptr) {
@@ -464,7 +519,7 @@ void DashboardUI::UpdateWeather(const WeatherSnapshot& snapshot) {
             delete weather_raw_image_;
             weather_raw_image_ = new LvglRawImage(ptr, size);
             lv_image_set_src(weather_icon_image_, weather_raw_image_->image_dsc());
-            loaded_icon_code_ = snapshot.icon_code;
+            loaded_icon_code_ = icon_code;
             icon_changed = true;
         }
     }

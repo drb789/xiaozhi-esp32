@@ -6,7 +6,16 @@
             "name": "lcdwiki-es3c28p",
             "sdkconfig_append": [
                 "CONFIG_USE_WECHAT_MESSAGE_STYLE=y",
-                "CONFIG_COMPILER_CXX_EXCEPTIONS=y"
+                "CONFIG_COMPILER_CXX_EXCEPTIONS=y",
+                "CONFIG_LCDWIKI_ES3C28P_LANDSCAPE=n"
+            ]
+        },
+        {
+            "name": "lcdwiki-es3c28p-landscape",
+            "sdkconfig_append": [
+                "CONFIG_USE_WECHAT_MESSAGE_STYLE=y",
+                "CONFIG_COMPILER_CXX_EXCEPTIONS=y",
+                "CONFIG_LCDWIKI_ES3C28P_LANDSCAPE=y"
             ]
         }
     ]
