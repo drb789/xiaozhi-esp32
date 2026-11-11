@@ -738,6 +738,10 @@ def read_custom_wake_word_from_sdkconfig(sdkconfig_path):
                 # Extract string value (remove quotes)
                 value = line.split('=', 1)[1].strip('"')
                 config_values['display'] = value
+            elif line.startswith('CONFIG_CUSTOM_WAKE_WORD_2='):
+                config_values['wake_word_2'] = line.split('=', 1)[1].strip('"')
+            elif line.startswith('CONFIG_CUSTOM_WAKE_WORD_DISPLAY_2='):
+                config_values['display_2'] = line.split('=', 1)[1].strip('"')
             elif 'CONFIG_CUSTOM_WAKE_WORD_THRESHOLD=' in line and not line.startswith('#'):
                 # Extract numeric value
                 value = line.split('=', 1)[1]
@@ -758,6 +762,8 @@ def read_custom_wake_word_from_sdkconfig(sdkconfig_path):
         return {
             'wake_word': config_values['wake_word'],
             'display': config_values['display'],
+            'wake_word_2': config_values.get('wake_word_2', ''),
+            'display_2': config_values.get('display_2', ''),
             'threshold': config_values['threshold'] / 100.0  # Convert to decimal (20 -> 0.2)
         }
     
@@ -1075,6 +1081,12 @@ def main():
                 }
             ]
         }
+        if custom_wake_word_config['wake_word_2'] and custom_wake_word_config['display_2']:
+            multinet_model_info['commands'].append({
+                'command': custom_wake_word_config['wake_word_2'],
+                'text': custom_wake_word_config['display_2'],
+                'action': 'wake',
+            })
         print(f"  custom wake word: {custom_wake_word_config['wake_word']} ({custom_wake_word_config['display']})")
         print(f"  wake word language: {language}")
         print(f"  wake word threshold: {custom_wake_word_config['threshold']}")

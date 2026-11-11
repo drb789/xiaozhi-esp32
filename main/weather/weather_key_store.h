@@ -7,6 +7,8 @@ class WeatherKeyStore {
 public:
     std::string GetKey() const;
     void SetKey(const std::string& key);
+    std::string GetHost() const;
+    bool SetHost(const std::string& host);
     // Create the NVS entry with an empty value if it does not exist yet, so
     // the field is visible to external NVS editing tools on a fresh device.
     void EnsureCreated();

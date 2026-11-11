@@ -36,5 +36,6 @@ GeoInfo ParseGeoIpResponse(const std::string& body);
 CityLookupData ParseCityLookupResponse(const std::string& body, int http_status);
 WeatherNowData ParseWeatherNowResponse(const std::string& body, int http_status);
 AirNowData ParseAirNowResponse(const std::string& body, int http_status);
+AirNowData ParseAirCurrentResponse(const std::string& body, int http_status);
 
 #endif  // WEATHER_PARSERS_H

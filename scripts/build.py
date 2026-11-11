@@ -353,6 +353,12 @@ def _wake_word_sdkconfig_options(
         options.append("CONFIG_WAKE_WORD_DISABLED=y")
         return normalized, options, ["CONFIG_WAKE_WORD_DISABLED"]
 
+    if normalized == "custom":
+        if target not in _AFE_WAKE_WORD_TARGETS:
+            raise ValueError("Custom wake words require an AFE-capable target")
+        options.append("CONFIG_USE_CUSTOM_WAKE_WORD=y")
+        return normalized, options, ["CONFIG_USE_CUSTOM_WAKE_WORD"]
+
     if target not in _ESP_WAKE_WORD_TARGETS | _AFE_WAKE_WORD_TARGETS:
         raise ValueError(f"Wake-word selection is not supported for target {target}")
     if not _WAKE_WORD_MODEL_PATTERN.fullmatch(normalized):
@@ -1617,7 +1623,8 @@ def build_board(
             requested_wake_word = "disabled"
             if wake_word_supported:
                 requested_wake_word = (
-                    "nihaoxiaozhi" if selected_language in {"zh-CN", "zh-TW"} else "hiesp"
+                    "custom" if _sdkconfig_assignments(sdkconfig_append).get("CONFIG_USE_CUSTOM_WAKE_WORD") == "y"
+                    else "nihaoxiaozhi" if selected_language in {"zh-CN", "zh-TW"} else "hiesp"
                 )
         (
             selected_wake_word,
@@ -1781,7 +1788,7 @@ def main(argv: Optional[list[str]] = None) -> None:
         metavar="MODEL",
         help=(
             "Wake-word model (for example wn9_jarvis_tts), "
-            "'nihaoxiaozhi', 'hiesp', or 'disabled'. Defaults to nihaoxiaozhi "
+            "'nihaoxiaozhi', 'hiesp', 'custom', or 'disabled'. Defaults to nihaoxiaozhi "
             "for zh-CN/zh-TW and hiesp otherwise; disabled on unsupported boards"
         ),
     )
